@@ -1,6 +1,9 @@
 import { createMiddleware } from "hono/factory"
+import { eq } from "drizzle-orm"
 import { jwtVerify } from "jose"
 import type { UserRole } from "@xopc-store/shared"
+import type { Db } from "../db/index.js"
+import * as tables from "../db/schema.js"
 import { unauthorized } from "../lib/errors.js"
 
 export type AuthVariables = {
@@ -8,7 +11,8 @@ export type AuthVariables = {
   role: UserRole
 }
 
-export function authMiddleware(secret: Uint8Array) {
+/** JWT 只用于识别用户；role 以数据库为准，便于升降级后立即生效而无需重新登录 */
+export function authMiddleware(db: Db, secret: Uint8Array) {
   return createMiddleware<{
     Variables: AuthVariables
   }>(async (c, next) => {
@@ -28,8 +32,17 @@ export function authMiddleware(secret: Uint8Array) {
     try {
       const { payload } = await jwtVerify(token, secret)
       const userId = payload.userId as string | undefined
-      const role = payload.role as UserRole | undefined
-      if (!userId || (role !== "user" && role !== "admin")) {
+      if (!userId) {
+        return unauthorized(c)
+      }
+      const row = await db.query.users.findFirst({
+        where: eq(tables.users.id, userId),
+      })
+      if (!row) {
+        return unauthorized(c)
+      }
+      const role = row.role as UserRole
+      if (role !== "user" && role !== "admin") {
         return unauthorized(c)
       }
       c.set("userId", userId)
