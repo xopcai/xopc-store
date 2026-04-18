@@ -9,6 +9,8 @@ module.exports = {
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",
+        // 3000=xopc-website, 3001=xopcrouter — use a free port on the host
+        PORT: 3002,
       },
     },
   ],

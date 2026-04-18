@@ -1,22 +1,17 @@
-# 示例：与 scripts/deploy.sh 生成的配置思路一致。
-# 将 store.example.com 换成你的域名；API 端口与 PM2 / ecosystem 中一致。
-# SSL 由 certbot 管理，证书路径形如 /etc/letsencrypt/live/<域名>/
+# HTTP only — used before Let's Encrypt; replaced by nginx.store.ssl.conf.template after certs exist.
+# Placeholders: @DOMAIN@ @API_PORT@ @WEB_ROOT@
 
 server {
-    listen 443 ssl http2;
-    server_name store.example.com;
+    listen 80;
+    listen [::]:80;
+    server_name @DOMAIN@;
 
-    ssl_certificate     /etc/letsencrypt/live/store.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/store.example.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    root /var/www/xopc-store/apps/web/dist;
+    root @WEB_ROOT@;
     index index.html;
     client_max_body_size 100M;
 
     location /api/ {
-        proxy_pass http://127.0.0.1:3002;
+        proxy_pass http://127.0.0.1:@API_PORT@;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,7 +21,7 @@ server {
     }
 
     location /files/ {
-        proxy_pass http://127.0.0.1:3002;
+        proxy_pass http://127.0.0.1:@API_PORT@;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -35,7 +30,7 @@ server {
     }
 
     location /health {
-        proxy_pass http://127.0.0.1:3002/health;
+        proxy_pass http://127.0.0.1:@API_PORT@/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
     }

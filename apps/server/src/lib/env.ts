@@ -12,11 +12,9 @@ const envSchema = z.object({
   GITHUB_CALLBACK_URL: z.string().url(),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   STORAGE_LOCAL_DIR: z.string().default("./data/packages"),
-  /** Public base URL for stored files, e.g. https://store.xopc.ai/files */
-  STORAGE_LOCAL_BASE_URL: z.string().url().optional(),
 })
 
-export type Env = Omit<z.infer<typeof envSchema>, "STORAGE_LOCAL_BASE_URL"> & {
+export type Env = z.infer<typeof envSchema> & {
   STORAGE_LOCAL_BASE_URL: string
 }
 
@@ -25,9 +23,7 @@ let cached: Env | null = null
 export function loadEnv(): Env {
   if (cached) return cached
   const raw = envSchema.parse(process.env)
-  const base =
-    raw.STORAGE_LOCAL_BASE_URL ??
-    `http://127.0.0.1:${raw.PORT}/files`
-  cached = { ...raw, STORAGE_LOCAL_BASE_URL: base }
+  const STORAGE_LOCAL_BASE_URL = `${raw.FRONTEND_URL.replace(/\/$/, "")}/files`
+  cached = { ...raw, STORAGE_LOCAL_BASE_URL }
   return cached
 }

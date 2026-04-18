@@ -20,7 +20,7 @@ export const packages = sqliteTable("packages", {
   authorId: text("author_id")
     .notNull()
     .references(() => users.id),
-  /** Set after version row exists; no DB FK to avoid circular migration issues */
+  /** Set after version row exists; no FK to avoid circular refs */
   latestVersionId: text("latest_version_id"),
   status: text("status", {
     enum: ["pending", "published", "rejected", "unpublished"],

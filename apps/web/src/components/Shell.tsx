@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 
+import { logoUrl } from "@/lib/brand"
+
 export function Shell(props: {
   title?: string
   user?: { username: string; role: string } | null
@@ -12,7 +14,17 @@ export function Shell(props: {
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-[var(--color-border)] bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-6">
-          <Link to="/" className="font-semibold text-lg text-[var(--color-ink)]">
+          <Link
+            to="/"
+            className="font-semibold text-lg text-[var(--color-ink)] flex items-center gap-2"
+          >
+            <img
+              src={logoUrl}
+              alt="xopc"
+              width={32}
+              height={32}
+              className="size-8 shrink-0 rounded-md"
+            />
             xopc Store
           </Link>
           <nav className="flex gap-4 text-sm text-[var(--color-muted)] flex-1">
