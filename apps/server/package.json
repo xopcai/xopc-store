@@ -1,0 +1,39 @@
+{
+  "name": "@xopc-store/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --clean --sourcemap",
+    "start": "node dist/index.js",
+    "lint": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "@xopc-store/shared": "workspace:*",
+    "adm-zip": "^0.5.16",
+    "better-sqlite3": "^11.9.1",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.41.0",
+    "gray-matter": "^4.0.3",
+    "hono": "^4.7.6",
+    "jose": "^6.0.10",
+    "nanoid": "^5.1.5",
+    "semver": "^7.7.1",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.14.1",
+    "@types/semver": "^7.7.0",
+    "drizzle-kit": "^0.31.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
