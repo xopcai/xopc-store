@@ -19,6 +19,32 @@ import {
   scanZipPackage,
 } from "../services/scan.js"
 
+function isBlobLike(v: unknown): v is Blob {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "arrayBuffer" in v &&
+    typeof (v as Blob).arrayBuffer === "function"
+  )
+}
+
+/** YAML frontmatter can surface BigInt etc.; plain JSON.stringify would throw. */
+function stringifyManifest(manifest: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(manifest, (_, v) => {
+      if (typeof v === "bigint") return v.toString()
+      return v
+    })
+  } catch {
+    const name = manifest.name
+    const description = manifest.description
+    return JSON.stringify({
+      name: typeof name === "string" ? name : "",
+      description: typeof description === "string" ? description : "",
+    })
+  }
+}
+
 export function createDeveloperRoutes(
   db: Db,
   storage: LocalStorageAdapter,
@@ -120,21 +146,39 @@ export function createDeveloperRoutes(
       return badRequest(c, ErrorCodes.VALIDATION_ERROR, "Invalid package name")
     }
 
-    const body = await c.req.parseBody({ all: true })
-    const file = body.file
-    const typeRaw = body.type
-    const versionRaw = body.version
-    const changelogRaw = body.changelog
-    const descriptionRaw = body.description
-
-    if (!(file instanceof File) && !(file && typeof file === "object" && "arrayBuffer" in file)) {
-      return badRequest(c, ErrorCodes.VALIDATION_ERROR, "file is required")
+    let form: FormData
+    try {
+      form = await c.req.raw.formData()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return badRequest(
+        c,
+        ErrorCodes.VALIDATION_ERROR,
+        `multipart body could not be read: ${msg}`,
+      )
     }
-    const buf = Buffer.from(await (file as File).arrayBuffer())
 
+    const fileField = form.get("file")
+    if (!isBlobLike(fileField)) {
+      return badRequest(
+        c,
+        ErrorCodes.VALIDATION_ERROR,
+        "file is required (multipart field \"file\")",
+      )
+    }
+    const buf = Buffer.from(await fileField.arrayBuffer())
+
+    const typeRaw = form.get("type")
+    const versionRaw = form.get("version")
+    const changelogRaw = form.get("changelog")
+    const descriptionRaw = form.get("description")
+    const descriptionForForm =
+      typeof descriptionRaw === "string" ? descriptionRaw : ""
+
+    const typeStr = typeof typeRaw === "string" ? typeRaw : ""
     const type =
-      typeRaw === "skill" || typeRaw === "extension"
-        ? (typeRaw as PackageType)
+      typeStr === "skill" || typeStr === "extension"
+        ? (typeStr as PackageType)
         : null
     if (!type) {
       return badRequest(
@@ -174,8 +218,8 @@ export function createDeveloperRoutes(
       }
     } else {
       const desc =
-        typeof descriptionRaw === "string" && descriptionRaw.trim()
-          ? descriptionRaw.trim()
+        descriptionForForm.trim()
+          ? descriptionForForm.trim()
           : typeof scan.data.manifest.description === "string"
             ? scan.data.manifest.description
             : ""
@@ -202,7 +246,9 @@ export function createDeveloperRoutes(
 
     const fileKey = `packages/${name}/${version}/${name}-${version}.zip`
     const now = Math.floor(Date.now() / 1000)
-    const manifestStr = JSON.stringify(scan.data.manifest)
+    const manifestStr = stringifyManifest(
+      scan.data.manifest as Record<string, unknown>,
+    )
 
     await storage.upload(fileKey, buf, "application/zip")
 
@@ -213,10 +259,9 @@ export function createDeveloperRoutes(
         : null
 
     if (!existing) {
-      const desc =
-        typeof descriptionRaw === "string" && descriptionRaw.trim()
-          ? descriptionRaw.trim()
-          : (scan.data.manifest.description as string)
+      const desc = descriptionForForm.trim()
+        ? descriptionForForm.trim()
+        : (scan.data.manifest.description as string)
       const pkgId = nanoid()
       await db.insert(tables.packages).values({
         id: pkgId,

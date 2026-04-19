@@ -91,6 +91,7 @@ REMOTE_CLEAN
         --exclude='.DS_Store' \
         --exclude='*.log' \
         --exclude='.npmrc' \
+        --exclude='third-party' \
         ./ "$SERVER:$REMOTE_DIR/"
     echo -e "${GREEN}✓ 同步完成${NC}"
 

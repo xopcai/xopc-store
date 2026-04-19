@@ -1,6 +1,8 @@
 import { serve } from "@hono/node-server"
 import { Hono } from "hono"
+import { HTTPException } from "hono/http-exception"
 import { cors } from "hono/cors"
+import { ErrorCodes } from "@xopc-store/shared"
 import { loadEnv } from "./lib/env.js"
 import { jwtSecretBytes } from "./lib/jwt.js"
 import { createDb } from "./db/index.js"
@@ -21,6 +23,18 @@ const storage = new LocalStorageAdapter(
 )
 
 const app = new Hono()
+
+app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    return err.getResponse()
+  }
+  console.error("[xopc-store]", err)
+  const message = err instanceof Error ? err.message : String(err)
+  return c.json(
+    { error: { code: ErrorCodes.INTERNAL, message } },
+    500,
+  )
+})
 
 app.use(
   "*",
