@@ -3,17 +3,24 @@ import fs from "node:fs/promises"
 import path from "node:path"
 
 export class LocalStorageAdapter implements StorageAdapter {
-  constructor(
-    private readonly baseDir: string,
-    private readonly publicBaseUrl: string,
-  ) {}
+  /** Canonical absolute root; avoids cwd/symlink edge cases vs string prefix checks. */
+  private readonly rootAbs: string
+
+  constructor(baseDir: string, private readonly publicBaseUrl: string) {
+    this.rootAbs = path.resolve(baseDir)
+  }
 
   private resolvePath(key: string): string {
-    const normalized = key.replace(/^\/+/, "")
-    const baseResolved = path.resolve(this.baseDir)
-    const full = path.resolve(baseResolved, normalized)
-    const rel = path.relative(baseResolved, full)
-    if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    const normalized = key.replace(/^\/+/, "").trim()
+    if (!normalized || normalized.includes("\0")) {
+      throw new Error("Invalid storage key")
+    }
+    const full = path.normalize(path.resolve(this.rootAbs, normalized))
+    const rel = path.relative(this.rootAbs, full)
+    if (rel === "" || rel.startsWith("..")) {
+      throw new Error("Invalid storage key")
+    }
+    if (process.platform === "win32" && path.isAbsolute(rel)) {
       throw new Error("Invalid storage key")
     }
     return full

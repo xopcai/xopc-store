@@ -1,5 +1,6 @@
 import type {
   AdminReviewItem,
+  AdminUserListItem,
   DeveloperPackageRow,
   PackageListResponse,
 } from "@xopc-store/shared"
@@ -84,6 +85,24 @@ export async function fetchDeveloperPackages() {
 export async function fetchAdminReviews() {
   const r = await fetch("/api/v1/admin/reviews", { credentials: "include" })
   return json<{ items: AdminReviewItem[] }>(r)
+}
+
+export async function fetchAdminUsers() {
+  const r = await fetch("/api/v1/admin/users", { credentials: "include" })
+  return json<{ items: AdminUserListItem[] }>(r)
+}
+
+export async function updateAdminUserRole(
+  userId: string,
+  role: "user" | "admin",
+) {
+  const r = await fetch(`/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  })
+  return json<{ ok: boolean; user: AdminUserListItem }>(r)
 }
 
 export async function approveVersion(versionId: string) {

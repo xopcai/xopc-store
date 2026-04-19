@@ -3,8 +3,10 @@ import { useState } from "react"
 import {
   approveVersion,
   fetchAdminReviews,
+  fetchAdminUsers,
   fetchMe,
   rejectVersion,
+  updateAdminUserRole,
   type CurrentUser,
 } from "@/lib/api"
 
@@ -17,6 +19,16 @@ export function AdminPage() {
   const { data: items = [], isLoading, error, refetch } = useQuery({
     queryKey: ["admin-reviews"],
     queryFn: fetchAdminReviews,
+    enabled: me.data?.role === "admin",
+    select: (d) => d.items,
+  })
+  const {
+    data: userRows = [],
+    isLoading: usersLoading,
+    error: usersError,
+  } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: fetchAdminUsers,
     enabled: me.data?.role === "admin",
     select: (d) => d.items,
   })
@@ -42,6 +54,22 @@ export function AdminPage() {
     },
   })
 
+  const setUserRole = useMutation({
+    mutationFn: ({
+      userId,
+      role,
+    }: {
+      userId: string
+      role: "user" | "admin"
+    }) => updateAdminUserRole(userId, role),
+    onSuccess: (_data, { userId }) => {
+      void qc.invalidateQueries({ queryKey: ["admin-users"] })
+      if (userId === me.data?.id) {
+        void qc.invalidateQueries({ queryKey: ["me"] })
+      }
+    },
+  })
+
   if (!me.data) {
     return (
       <p className="text-[var(--color-muted)]">Sign in to access admin.</p>
@@ -54,8 +82,9 @@ export function AdminPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-6">Review queue</h1>
+    <div className="space-y-12">
+      <section>
+        <h1 className="text-2xl font-semibold mb-6">Review queue</h1>
       {isLoading ? (
         <p className="text-[var(--color-muted)]">Loading…</p>
       ) : error ? (
@@ -150,6 +179,108 @@ export function AdminPage() {
           ))}
         </ul>
       )}
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Accounts</h2>
+        <p className="text-sm text-[var(--color-muted)] mb-4">
+          Promote users to admin or set them back to a normal account. At least
+          one admin must remain.
+        </p>
+        {usersLoading ? (
+          <p className="text-[var(--color-muted)]">Loading users…</p>
+        ) : usersError ? (
+          <p className="text-red-600">{(usersError as Error).message}</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <th className="px-4 py-3 font-medium">User</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Joined</th>
+                  <th className="px-4 py-3 font-medium w-[1%]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userRows.map((u) => (
+                  <tr
+                    key={u.id}
+                    className="border-b border-[var(--color-border)] last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {u.avatarUrl ? (
+                          <img
+                            src={u.avatarUrl}
+                            alt=""
+                            className="size-8 rounded-full"
+                          />
+                        ) : (
+                          <span className="size-8 rounded-full bg-[var(--color-surface)] inline-block shrink-0" />
+                        )}
+                        <span className="font-mono">
+                          @{u.username}
+                          {u.id === me.data?.id ? (
+                            <span className="text-[var(--color-muted)] font-sans">
+                              {" "}
+                              (you)
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={
+                          u.role === "admin"
+                            ? "text-amber-700 font-medium"
+                            : "text-[var(--color-muted)]"
+                        }
+                      >
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-muted)]">
+                      {new Date(u.createdAt * 1000).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {u.role === "admin" ? (
+                        <button
+                          type="button"
+                          disabled={setUserRole.isPending}
+                          onClick={() =>
+                            setUserRole.mutate({ userId: u.id, role: "user" })
+                          }
+                          className="px-3 py-1.5 rounded-md border border-[var(--color-border)] text-sm hover:bg-[var(--color-surface)] disabled:opacity-50"
+                        >
+                          Set as user
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={setUserRole.isPending}
+                          onClick={() =>
+                            setUserRole.mutate({ userId: u.id, role: "admin" })
+                          }
+                          className="px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-white text-sm hover:opacity-90 disabled:opacity-50"
+                        >
+                          Set as admin
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {setUserRole.isError ? (
+          <p className="text-red-600 text-sm mt-2">
+            {(setUserRole.error as Error).message}
+          </p>
+        ) : null}
+      </section>
     </div>
   )
 }

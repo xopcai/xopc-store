@@ -1,4 +1,5 @@
 import "dotenv/config"
+import path from "node:path"
 import { z } from "zod"
 
 const envSchema = z.object({
@@ -23,7 +24,8 @@ let cached: Env | null = null
 export function loadEnv(): Env {
   if (cached) return cached
   const raw = envSchema.parse(process.env)
+  const STORAGE_LOCAL_DIR = path.resolve(process.cwd(), raw.STORAGE_LOCAL_DIR)
   const STORAGE_LOCAL_BASE_URL = `${raw.FRONTEND_URL.replace(/\/$/, "")}/files`
-  cached = { ...raw, STORAGE_LOCAL_BASE_URL }
+  cached = { ...raw, STORAGE_LOCAL_DIR, STORAGE_LOCAL_BASE_URL }
   return cached
 }

@@ -116,8 +116,7 @@ if [[ "\$FRESH" == "1" ]] || [[ ! -f "apps/server/.env" ]]; then
   echo "已写入 apps/server/.env（自 .env.example）。请配置 GITHUB_* 与 JWT_SECRET。"
 fi
 
-echo "同步数据库结构 (drizzle-kit push)..."
-( cd apps/server && pnpm exec drizzle-kit push --force )
+echo "数据库迁移由 API 进程启动时自动执行 (drizzle migrate)；确保 apps/server/drizzle 已随代码同步。"
 
 echo "重启 API (PM2)..."
 pm2 restart xopc-store-api 2>/dev/null || pm2 start deploy/ecosystem.config.cjs --only xopc-store-api

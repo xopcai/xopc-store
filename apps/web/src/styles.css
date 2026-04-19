@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@import "highlight.js/styles/github-dark.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -15,11 +18,4 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: var(--color-surface);
-}
-
-.hljs {
-  background: #0f1419 !important;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  overflow-x: auto;
 }

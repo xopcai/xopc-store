@@ -1,5 +1,6 @@
 import Database from "better-sqlite3"
 import { drizzle } from "drizzle-orm/better-sqlite3"
+import { migrate } from "drizzle-orm/better-sqlite3/migrator"
 import * as schema from "./schema.js"
 import path from "node:path"
 import fs from "node:fs"
@@ -16,7 +17,10 @@ export function createDb(databaseUrl: string) {
   }
   const sqlite = new Database(resolved)
   sqlite.pragma("journal_mode = WAL")
-  return drizzle(sqlite, { schema })
+  const db = drizzle(sqlite, { schema })
+  const migrationsFolder = path.join(process.cwd(), "drizzle")
+  migrate(db, { migrationsFolder })
+  return db
 }
 
 export { schema }

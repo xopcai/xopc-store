@@ -22,14 +22,6 @@ export function PackageDetailPage() {
     queryFn: () => fetchPackageVersions(name),
   })
 
-  const cmd = `xopc install ${name}`
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(cmd)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   if (detailQuery.isLoading) {
     return <p className="text-[var(--color-muted)]">Loading…</p>
   }
@@ -57,6 +49,17 @@ export function PackageDetailPage() {
     updatedAt: number
   }
 
+  const installCmd =
+    d.type === "skill"
+      ? `xopc skills install ${name}`
+      : `xopc extension install ${name}`
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(installCmd)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const versionsData = versionsQuery.data as
     | {
         items: {
@@ -75,6 +78,23 @@ export function PackageDetailPage() {
       >
         ← Back to Store
       </Link>
+      <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm mb-8">
+        <h2 className="text-sm font-medium text-[var(--color-muted)] mb-3">
+          Install
+        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+          <code className="flex-1 text-sm bg-[var(--color-surface)] rounded-lg px-3 py-2 font-mono break-all">
+            {installCmd}
+          </code>
+          <button
+            type="button"
+            onClick={copy}
+            className="shrink-0 px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium sm:self-auto"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div>
           <div className="flex items-start gap-3 mb-4">
@@ -93,7 +113,9 @@ export function PackageDetailPage() {
           <p className="text-sm text-[var(--color-muted)] mb-8">
             by @{d.author.username}
           </p>
-          <div className="prose prose-sm max-w-none">
+          <div
+            className="prose prose-slate prose-sm max-w-none prose-pre:bg-transparent prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none [&_pre]:rounded-lg [&_pre]:overflow-hidden"
+          >
             {d.readme ? (
               <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
                 {d.readme}
@@ -132,23 +154,6 @@ export function PackageDetailPage() {
           )}
         </div>
         <aside className="space-y-6">
-          <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-medium text-[var(--color-muted)] mb-3">
-              Install
-            </h3>
-            <div className="flex gap-2">
-              <code className="flex-1 text-sm bg-[var(--color-surface)] rounded-lg px-3 py-2 font-mono break-all">
-                {cmd}
-              </code>
-              <button
-                type="button"
-                onClick={copy}
-                className="shrink-0 px-3 py-2 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-          </div>
           <div className="rounded-xl border border-[var(--color-border)] bg-white p-5 text-sm space-y-2">
             <div className="flex justify-between">
               <span className="text-[var(--color-muted)]">Version</span>

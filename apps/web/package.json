@@ -10,9 +10,11 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.74.4",
     "@tanstack/react-router": "^1.117.1",
     "@xopc-store/shared": "workspace:*",
+    "highlight.js": "^11.11.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",

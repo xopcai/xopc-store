@@ -133,6 +133,11 @@ export interface AdminReviewItem {
   createdAt: number
 }
 
+/** User row for admin account management (list + role updates). */
+export interface AdminUserListItem extends UserPublic {
+  createdAt: number
+}
+
 export interface StorageAdapter {
   upload(key: string, data: Uint8Array, mimeType: string): Promise<void>
   download(key: string): Promise<Uint8Array>
