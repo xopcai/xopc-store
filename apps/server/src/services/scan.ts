@@ -27,7 +27,7 @@ function listZipEntries(zip: AdmZip): string[] {
 }
 
 export function isValidPackageName(name: string): boolean {
-  if (name.length < 2 || name.length > 64) return false
+  if (name.length < 1 || name.length > 64) return false
   if (!/^[a-z0-9-]+$/.test(name)) return false
   if (name.startsWith("-") || name.endsWith("-")) return false
   return true

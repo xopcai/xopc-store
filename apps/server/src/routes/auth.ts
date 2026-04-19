@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { getCookie, setCookie } from "hono/cookie"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import type { Db } from "../db/index.js"
 import * as tables from "../db/schema.js"
@@ -107,6 +107,11 @@ export function createAuthRoutes(
         })
         .where(eq(tables.users.id, userId))
     } else {
+      const countRows = await db
+        .select({ n: sql<number>`count(*)` })
+        .from(tables.users)
+      const userCount = Number(countRows[0]?.n ?? 0)
+      const role = userCount === 0 ? "admin" : "user"
       userId = nanoid()
       await db.insert(tables.users).values({
         id: userId,
@@ -114,7 +119,7 @@ export function createAuthRoutes(
         username: gh.login,
         avatarUrl: gh.avatar_url ?? null,
         email: gh.email ?? null,
-        role: "user",
+        role,
         createdAt: now,
       })
     }

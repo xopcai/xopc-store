@@ -78,7 +78,7 @@ const API_BASE = (process.env.XOPC_API_BASE ?? "https://store.xopc.ai").replace(
 const TOKEN = process.env.XOPC_TOKEN
 
 function isValidPackageName(name) {
-  if (name.length < 2 || name.length > 64) return false
+  if (name.length < 1 || name.length > 64) return false
   if (!/^[a-z0-9-]+$/.test(name)) return false
   if (name.startsWith("-") || name.endsWith("-")) return false
   return true

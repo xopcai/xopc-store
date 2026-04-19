@@ -10,8 +10,10 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   private resolvePath(key: string): string {
     const normalized = key.replace(/^\/+/, "")
-    const full = path.join(this.baseDir, normalized)
-    if (!full.startsWith(path.resolve(this.baseDir))) {
+    const baseResolved = path.resolve(this.baseDir)
+    const full = path.resolve(baseResolved, normalized)
+    const rel = path.relative(baseResolved, full)
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
       throw new Error("Invalid storage key")
     }
     return full
