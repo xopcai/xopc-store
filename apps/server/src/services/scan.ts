@@ -68,7 +68,16 @@ export function scanZipPackage(
       return { ok: false, message: "SKILL.md not found in archive" }
     }
     const raw = zip.readAsText(skillPath)
-    const parsed = matter(raw)
+    let parsed: ReturnType<typeof matter>
+    try {
+      parsed = matter(raw)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return {
+        ok: false,
+        message: `SKILL.md frontmatter could not be parsed (YAML): ${msg}`,
+      }
+    }
     const fm = parsed.data as Record<string, unknown>
     const name = fm.name
     const desc = fm.description
