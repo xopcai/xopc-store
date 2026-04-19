@@ -113,6 +113,18 @@ export async function approveVersion(versionId: string) {
   return json(r)
 }
 
+export async function approveAllPendingSkills(): Promise<{
+  ok: boolean
+  approved: number
+  versionIds: string[]
+}> {
+  const r = await fetch("/api/v1/admin/reviews/approve-all-skills", {
+    method: "POST",
+    credentials: "include",
+  })
+  return json(r)
+}
+
 export async function rejectVersion(versionId: string, reason: string) {
   const r = await fetch(`/api/v1/admin/versions/${versionId}/reject`, {
     method: "POST",

@@ -1,11 +1,57 @@
 import { Hono } from "hono"
 import type { AuthVariables } from "../middleware/auth.js"
-import { desc, eq, sql } from "drizzle-orm"
+import { and, asc, desc, eq, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import type { Db } from "../db/index.js"
 import * as tables from "../db/schema.js"
 import { badRequest, conflict, notFound } from "../lib/errors.js"
 import { ErrorCodes } from "@xopc-store/shared"
+
+type ApproveOneResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "not_pending" }
+
+async function approvePendingVersion(
+  db: Db,
+  versionId: string,
+  reviewerId: string,
+): Promise<ApproveOneResult> {
+  const ver = await db.query.packageVersions.findFirst({
+    where: eq(tables.packageVersions.id, versionId),
+  })
+  if (!ver) {
+    return { ok: false, reason: "not_found" }
+  }
+  if (ver.status !== "pending") {
+    return { ok: false, reason: "not_pending" }
+  }
+  const now = Math.floor(Date.now() / 1000)
+  await db
+    .update(tables.packageVersions)
+    .set({
+      status: "published",
+      publishedAt: now,
+      rejectReason: null,
+    })
+    .where(eq(tables.packageVersions.id, versionId))
+  await db
+    .update(tables.packages)
+    .set({
+      status: "published",
+      latestVersionId: versionId,
+      updatedAt: now,
+    })
+    .where(eq(tables.packages.id, ver.packageId))
+  await db.insert(tables.reviewLogs).values({
+    id: nanoid(),
+    versionId,
+    reviewerId,
+    action: "approve",
+    reason: null,
+    createdAt: now,
+  })
+  return { ok: true }
+}
 
 export function createAdminRoutes(db: Db) {
   const app = new Hono<{ Variables: AuthVariables }>()
@@ -136,47 +182,52 @@ export function createAdminRoutes(db: Db) {
     return c.json({ items })
   })
 
+  app.post("/reviews/approve-all-skills", async (c) => {
+    const reviewerId = c.get("userId") as string
+    const pending = await db
+      .select({ versionId: tables.packageVersions.id })
+      .from(tables.packageVersions)
+      .innerJoin(
+        tables.packages,
+        eq(tables.packageVersions.packageId, tables.packages.id),
+      )
+      .where(
+        and(
+          eq(tables.packageVersions.status, "pending"),
+          eq(tables.packages.type, "skill"),
+        ),
+      )
+      .orderBy(asc(tables.packageVersions.createdAt))
+
+    const versionIds: string[] = []
+    for (const row of pending) {
+      const r = await approvePendingVersion(db, row.versionId, reviewerId)
+      if (r.ok === true) {
+        versionIds.push(row.versionId)
+      }
+    }
+
+    return c.json({
+      ok: true,
+      approved: versionIds.length,
+      versionIds,
+    })
+  })
+
   app.post("/versions/:versionId/approve", async (c) => {
     const reviewerId = c.get("userId") as string
     const versionId = c.req.param("versionId")
-    const ver = await db.query.packageVersions.findFirst({
-      where: eq(tables.packageVersions.id, versionId),
-    })
-    if (!ver) {
+    const r = await approvePendingVersion(db, versionId, reviewerId)
+    if (r.ok === false && r.reason === "not_found") {
       return notFound(c, ErrorCodes.VERSION_NOT_FOUND, "Version not found")
     }
-    if (ver.status !== "pending") {
+    if (r.ok === false && r.reason === "not_pending") {
       return badRequest(
         c,
         ErrorCodes.VALIDATION_ERROR,
         "Version is not pending review",
       )
     }
-    const now = Math.floor(Date.now() / 1000)
-    await db
-      .update(tables.packageVersions)
-      .set({
-        status: "published",
-        publishedAt: now,
-        rejectReason: null,
-      })
-      .where(eq(tables.packageVersions.id, versionId))
-    await db
-      .update(tables.packages)
-      .set({
-        status: "published",
-        latestVersionId: versionId,
-        updatedAt: now,
-      })
-      .where(eq(tables.packages.id, ver.packageId))
-    await db.insert(tables.reviewLogs).values({
-      id: nanoid(),
-      versionId,
-      reviewerId,
-      action: "approve",
-      reason: null,
-      createdAt: now,
-    })
     return c.json({ ok: true })
   })
 

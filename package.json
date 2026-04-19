@@ -9,7 +9,8 @@
     "dev:web": "pnpm --filter @xopc-store/web dev",
     "lint": "pnpm -r run lint",
     "db:generate": "pnpm --filter @xopc-store/server db:generate",
-    "db:push": "pnpm --filter @xopc-store/server db:push"
+    "db:push": "pnpm --filter @xopc-store/server db:push",
+    "upload-skills": "node scripts/upload-skills-to-store.mjs"
   },
   "engines": {
     "node": ">=22"

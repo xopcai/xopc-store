@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import {
+  approveAllPendingSkills,
   approveVersion,
   fetchAdminReviews,
   fetchAdminUsers,
@@ -37,6 +38,14 @@ export function AdminPage() {
 
   const approve = useMutation({
     mutationFn: (id: string) => approveVersion(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-reviews"] })
+      void refetch()
+    },
+  })
+
+  const approveAllSkills = useMutation({
+    mutationFn: approveAllPendingSkills,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin-reviews"] })
       void refetch()
@@ -84,7 +93,33 @@ export function AdminPage() {
   return (
     <div className="space-y-12">
       <section>
-        <h1 className="text-2xl font-semibold mb-6">Review queue</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-semibold">Review queue</h1>
+          {!isLoading &&
+          !error &&
+          items.some((it) => it.type === "skill") ? (
+            <button
+              type="button"
+              disabled={approveAllSkills.isPending}
+              onClick={() => {
+                const n = items.filter((it) => it.type === "skill").length
+                if (
+                  !window.confirm(
+                    `Approve all ${n} pending skill(s)? Extension submissions are not included.`,
+                  )
+                ) {
+                  return
+                }
+                approveAllSkills.mutate()
+              }}
+              className="px-4 py-2 rounded-md bg-emerald-700 text-white text-sm hover:opacity-95 disabled:opacity-50"
+            >
+              {approveAllSkills.isPending
+                ? "Approving…"
+                : "Approve all skills"}
+            </button>
+          ) : null}
+        </div>
       {isLoading ? (
         <p className="text-[var(--color-muted)]">Loading…</p>
       ) : error ? (
@@ -93,6 +128,11 @@ export function AdminPage() {
         <p className="text-[var(--color-muted)]">No pending reviews.</p>
       ) : (
         <ul className="space-y-6">
+          {approveAllSkills.isError ? (
+            <p className="text-red-600 text-sm mb-2">
+              {(approveAllSkills.error as Error).message}
+            </p>
+          ) : null}
           {items.map((it) => (
             <li
               key={it.versionId}
