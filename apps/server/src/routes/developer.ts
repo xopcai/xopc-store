@@ -13,6 +13,7 @@ import {
 } from "../lib/errors.js"
 import { ErrorCodes } from "@xopc-store/shared"
 import type { PackageType } from "@xopc-store/shared"
+import { normalizeCategory } from "../lib/category.js"
 import {
   assertValidSemver,
   isValidPackageName,
@@ -76,6 +77,7 @@ export function createDeveloperRoutes(
           id: r.pkg.id,
           name: r.pkg.name,
           type: r.pkg.type,
+          category: r.pkg.category,
           description: r.pkg.description,
           status: r.pkg.status,
           downloads: r.pkg.downloads,
@@ -262,11 +264,15 @@ export function createDeveloperRoutes(
       const desc = descriptionForForm.trim()
         ? descriptionForForm.trim()
         : (scan.data.manifest.description as string)
+      const m = scan.data.manifest as Record<string, unknown>
+      const catR = normalizeCategory(m.category)
+      const category = catR.ok ? catR.category : null
       const pkgId = nanoid()
       await db.insert(tables.packages).values({
         id: pkgId,
         name,
         type,
+        category,
         description: desc,
         readme: scan.data.readme,
         authorId: userId,

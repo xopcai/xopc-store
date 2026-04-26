@@ -58,7 +58,7 @@ app.route("/api/v1/developer", developer)
 const admin = new Hono()
 admin.use("*", authMiddleware(db, jwtSecret))
 admin.use("*", requireAdmin())
-admin.route("/", createAdminRoutes(db))
+admin.route("/", createAdminRoutes(db, storage))
 app.route("/api/v1/admin", admin)
 
 app.get("/health", (c) => c.json({ ok: true }))

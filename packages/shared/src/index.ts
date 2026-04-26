@@ -52,6 +52,8 @@ export interface PackageListItem {
   id: string
   name: string
   type: PackageType
+  /** Current published category, or null = uncategorized */
+  category: string | null
   description: string
   downloads: number
   author: Pick<UserPublic, "username" | "avatarUrl">
@@ -63,6 +65,7 @@ export interface PackageDetail {
   id: string
   name: string
   type: PackageType
+  category: string | null
   description: string
   readme: string | null
   status: PackageStatus
@@ -106,10 +109,15 @@ export interface PackageListResponse {
   meta: PaginationMeta
 }
 
+export interface PackageCategoriesResponse {
+  items: string[]
+}
+
 export interface DeveloperPackageRow {
   id: string
   name: string
   type: PackageType
+  category: string | null
   description: string
   status: PackageStatus
   downloads: number

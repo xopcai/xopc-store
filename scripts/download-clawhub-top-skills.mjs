@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Download ClawHub (clawhub.ai) public skills ranked by downloads, up to N items (default 1000).
+ * Download ClawHub (clawhub.ai) public skills ranked by downloads — same ordering as
+ * https://clawhub.ai/skills?sort=downloads — up to N items (default 1000).
  *
  * Uses Convex query `skills:listPublicPageV4` (paginated, max 200 rows per request) and
  * HTTP GET `{CONVEX_SITE}/api/download?slug=...` for each skill zip.

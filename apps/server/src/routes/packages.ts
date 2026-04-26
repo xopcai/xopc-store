@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { and, desc, eq, like, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, isNotNull, isNull, like, or, sql } from "drizzle-orm"
 import type { Db } from "../db/index.js"
 import * as tables from "../db/schema.js"
 import type { LocalStorageAdapter } from "../storage/local.adapter.js"
@@ -10,10 +10,30 @@ import type { PackageType, SortOrder } from "@xopc-store/shared"
 export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
   const app = new Hono()
 
+  const UNCATEGORIZED = "__uncategorized"
+
+  app.get("/categories", async (c) => {
+    const rows = await db
+      .selectDistinct({ category: tables.packages.category })
+      .from(tables.packages)
+      .where(
+        and(
+          eq(tables.packages.status, "published"),
+          isNotNull(tables.packages.category),
+        ),
+      )
+      .orderBy(asc(tables.packages.category))
+    const items = rows
+      .map((r) => r.category)
+      .filter((c): c is string => typeof c === "string" && c.length > 0)
+    return c.json({ items })
+  })
+
   app.get("/", async (c) => {
     const q = c.req.query("q")?.trim() ?? ""
     const type = c.req.query("type") as PackageType | undefined
     const sort = (c.req.query("sort") ?? "downloads") as SortOrder
+    const categoryParam = c.req.query("category")?.trim() ?? ""
     const page = Math.max(1, Number(c.req.query("page")) || 1)
     const pageSize = Math.min(50, Math.max(1, Number(c.req.query("pageSize")) || 20))
     const offset = (page - 1) * pageSize
@@ -21,6 +41,11 @@ export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
     const conditions = [eq(tables.packages.status, "published")]
     if (type === "skill" || type === "extension") {
       conditions.push(eq(tables.packages.type, type))
+    }
+    if (categoryParam === UNCATEGORIZED) {
+      conditions.push(isNull(tables.packages.category))
+    } else if (categoryParam) {
+      conditions.push(eq(tables.packages.category, categoryParam))
     }
     if (q) {
       const safe = q.replace(/[^a-z0-9\s-]/gi, "").trim()
@@ -43,10 +68,14 @@ export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
       .where(whereClause)
     const total = Number(countRows[0]?.n ?? 0)
 
-    const orderBy =
+    const nullsLast = sql`(CASE WHEN ${tables.packages.category} IS NULL THEN 1 ELSE 0 END)`
+    const orderBy = [
+      asc(nullsLast),
+      asc(tables.packages.category),
       sort === "newest"
         ? desc(tables.packages.updatedAt)
-        : desc(tables.packages.downloads)
+        : desc(tables.packages.downloads),
+    ]
 
     const rows = await db
       .select({
@@ -64,7 +93,7 @@ export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
         eq(tables.packages.latestVersionId, tables.packageVersions.id),
       )
       .where(whereClause)
-      .orderBy(orderBy)
+      .orderBy(...orderBy)
       .limit(pageSize)
       .offset(offset)
 
@@ -74,6 +103,7 @@ export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
         id: r.pkg.id,
         name: r.pkg.name,
         type: r.pkg.type,
+        category: r.pkg.category,
         description: r.pkg.description,
         downloads: r.pkg.downloads,
         author: {
@@ -120,6 +150,7 @@ export function createPackageRoutes(db: Db, storage: LocalStorageAdapter) {
       id: row.id,
       name: row.name,
       type: row.type,
+      category: row.category,
       description: row.description,
       readme: row.readme,
       status: row.status,

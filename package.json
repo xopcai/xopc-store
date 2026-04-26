@@ -10,7 +10,8 @@
     "lint": "pnpm -r run lint",
     "db:generate": "pnpm --filter @xopc-store/server db:generate",
     "db:push": "pnpm --filter @xopc-store/server db:push",
-    "upload-skills": "node scripts/upload-skills-to-store.mjs"
+    "upload-skills": "node scripts/upload-skills-to-store.mjs",
+    "download-clawhub-top-100": "node scripts/download-clawhub-top-skills.mjs --limit 100 --out third-party/clawhub-top-100"
   },
   "engines": {
     "node": ">=22"

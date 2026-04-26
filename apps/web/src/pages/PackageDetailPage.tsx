@@ -36,6 +36,7 @@ export function PackageDetailPage() {
   const d = detailQuery.data as {
     name: string
     type: string
+    category: string | null
     description: string
     readme: string | null
     downloads: number
@@ -97,7 +98,7 @@ export function PackageDetailPage() {
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div>
-          <div className="flex items-start gap-3 mb-4">
+          <div className="flex flex-wrap items-start gap-2 mb-4">
             <h1 className="text-3xl font-semibold">{d.name}</h1>
             <span
               className={`text-xs uppercase tracking-wide px-2 py-1 rounded mt-1 ${
@@ -108,6 +109,11 @@ export function PackageDetailPage() {
             >
               {d.type === "skill" ? "Skill" : "Extension"}
             </span>
+            {d.category ? (
+              <span className="text-xs px-2 py-1 rounded mt-1 bg-[var(--color-surface)] text-[var(--color-muted)] border border-[var(--color-border)]">
+                {d.category}
+              </span>
+            ) : null}
           </div>
           <p className="text-[var(--color-muted)] mb-2">{d.description}</p>
           <p className="text-sm text-[var(--color-muted)] mb-8">
@@ -158,6 +164,10 @@ export function PackageDetailPage() {
             <div className="flex justify-between">
               <span className="text-[var(--color-muted)]">Version</span>
               <span className="font-mono">{d.latestVersion?.version ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--color-muted)]">Category</span>
+              <span>{d.category ?? "Uncategorized"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--color-muted)]">Updated</span>

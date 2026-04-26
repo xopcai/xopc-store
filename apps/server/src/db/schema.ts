@@ -15,6 +15,8 @@ export const packages = sqliteTable("packages", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   type: text("type", { enum: ["skill", "extension"] }).notNull(),
+  /** Denormalized from published version manifest; public-facing category */
+  category: text("category"),
   description: text("description").notNull(),
   readme: text("readme"),
   authorId: text("author_id")
@@ -38,7 +40,7 @@ export const packageVersions = sqliteTable(
     id: text("id").primaryKey(),
     packageId: text("package_id")
       .notNull()
-      .references(() => packages.id),
+      .references(() => packages.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
     fileKey: text("file_key").notNull(),
     fileSize: integer("file_size").notNull(),
@@ -58,7 +60,7 @@ export const reviewLogs = sqliteTable("review_logs", {
   id: text("id").primaryKey(),
   versionId: text("version_id")
     .notNull()
-    .references(() => packageVersions.id),
+    .references(() => packageVersions.id, { onDelete: "cascade" }),
   reviewerId: text("reviewer_id")
     .notNull()
     .references(() => users.id),

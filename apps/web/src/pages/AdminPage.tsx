@@ -3,11 +3,15 @@ import { useState } from "react"
 import {
   approveAllPendingSkills,
   approveVersion,
+  deleteAdminPackage,
+  deleteAdminVersion,
+  fetchAdminPackages,
   fetchAdminReviews,
   fetchAdminUsers,
   fetchMe,
   rejectVersion,
   updateAdminUserRole,
+  type AdminPackageItem,
   type CurrentUser,
 } from "@/lib/api"
 
@@ -30,6 +34,16 @@ export function AdminPage() {
   } = useQuery({
     queryKey: ["admin-users"],
     queryFn: fetchAdminUsers,
+    enabled: me.data?.role === "admin",
+    select: (d) => d.items,
+  })
+  const {
+    data: packageRows = [],
+    isLoading: packagesLoading,
+    error: packagesError,
+  } = useQuery({
+    queryKey: ["admin-packages"],
+    queryFn: fetchAdminPackages,
     enabled: me.data?.role === "admin",
     select: (d) => d.items,
   })
@@ -76,6 +90,21 @@ export function AdminPage() {
       if (userId === me.data?.id) {
         void qc.invalidateQueries({ queryKey: ["me"] })
       }
+    },
+  })
+
+  const deletePackage = useMutation({
+    mutationFn: (name: string) => deleteAdminPackage(name),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-packages"] })
+    },
+  })
+
+  const deleteVersion = useMutation({
+    mutationFn: (versionId: string) => deleteAdminVersion(versionId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin-packages"] })
+      void qc.invalidateQueries({ queryKey: ["admin-reviews"] })
     },
   })
 
@@ -318,6 +347,118 @@ export function AdminPage() {
         {setUserRole.isError ? (
           <p className="text-red-600 text-sm mt-2">
             {(setUserRole.error as Error).message}
+          </p>
+        ) : null}
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Packages</h2>
+        <p className="text-sm text-[var(--color-muted)] mb-4">
+          View and manage all packages. Admin can delete any package or version.
+        </p>
+        {packagesLoading ? (
+          <p className="text-[var(--color-muted)]">Loading packages…</p>
+        ) : packagesError ? (
+          <p className="text-red-600">{(packagesError as Error).message}</p>
+        ) : packageRows.length === 0 ? (
+          <p className="text-[var(--color-muted)]">No packages found.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <th className="px-4 py-3 font-medium">Package</th>
+                  <th className="px-4 py-3 font-medium">Type</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Author</th>
+                  <th className="px-4 py-3 font-medium">Downloads</th>
+                  <th className="px-4 py-3 font-medium">Updated</th>
+                  <th className="px-4 py-3 font-medium w-[1%]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {packageRows.map((pkg: AdminPackageItem) => (
+                  <tr
+                    key={pkg.id}
+                    className="border-b border-[var(--color-border)] last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="font-medium">{pkg.name}</span>
+                        {pkg.latestVersion && (
+                          <span className="text-[var(--color-muted)] ml-2">
+                            v{pkg.latestVersion}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-[var(--color-muted)] truncate max-w-xs">
+                        {pkg.description}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs uppercase px-2 py-1 rounded ${
+                          pkg.type === "skill"
+                            ? "bg-blue-50 text-[var(--color-skill)]"
+                            : "bg-purple-50 text-[var(--color-extension)]"
+                        }`}
+                      >
+                        {pkg.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          pkg.status === "published"
+                            ? "bg-green-50 text-green-700"
+                            : pkg.status === "pending"
+                              ? "bg-yellow-50 text-yellow-700"
+                              : pkg.status === "rejected"
+                                ? "bg-red-50 text-red-700"
+                                : "bg-gray-50 text-gray-600"
+                        }`}
+                      >
+                        {pkg.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-sm">
+                        @{pkg.author.username}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-muted)]">
+                      {pkg.downloads.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-muted)]">
+                      {new Date(pkg.updatedAt * 1000).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        disabled={deletePackage.isPending}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Delete package "${pkg.name}"? This will remove all versions and cannot be undone.`,
+                            )
+                          ) {
+                            deletePackage.mutate(pkg.name)
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50"
+                      >
+                        Delete package
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {deletePackage.isError ? (
+          <p className="text-red-600 text-sm mt-2">
+            {(deletePackage.error as Error).message}
           </p>
         ) : null}
       </section>

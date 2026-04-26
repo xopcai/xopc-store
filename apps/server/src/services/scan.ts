@@ -2,6 +2,7 @@ import AdmZip from "adm-zip"
 import matter from "gray-matter"
 import semver from "semver"
 import type { PackageType } from "@xopc-store/shared"
+import { normalizeCategory } from "../lib/category.js"
 
 const MAX_SKILL_BYTES = 1 * 1024 * 1024
 const MAX_EXTENSION_BYTES = 10 * 1024 * 1024
@@ -93,6 +94,12 @@ export function scanZipPackage(
         message: `Package name mismatch: manifest name "${name}" must be "${expectedName}"`,
       }
     }
+    if (Object.hasOwn(fm, "category")) {
+      const cat = normalizeCategory(fm.category)
+      if (!cat.ok) {
+        return { ok: false, message: `SKILL.md: ${cat.message}` }
+      }
+    }
     const manifest = {
       name,
       description: desc,
@@ -138,6 +145,12 @@ export function scanZipPackage(
     return {
       ok: false,
       message: `Package name mismatch: extension id/name must match "${expectedName}"`,
+    }
+  }
+  if (Object.hasOwn(obj, "category")) {
+    const cat = normalizeCategory(obj.category)
+    if (!cat.ok) {
+      return { ok: false, message: `xopc.extension.json: ${cat.message}` }
     }
   }
   const readmePath = entries.find(

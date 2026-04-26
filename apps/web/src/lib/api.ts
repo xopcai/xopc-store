@@ -2,8 +2,12 @@ import type {
   AdminReviewItem,
   AdminUserListItem,
   DeveloperPackageRow,
+  PackageCategoriesResponse,
   PackageListResponse,
 } from "@xopc-store/shared"
+
+/** Use as `category` query param to list packages with no category. */
+export const PACKAGE_CATEGORY_UNCATEGORIZED = "__uncategorized" as const
 
 export type CurrentUser = {
   id: string
@@ -29,6 +33,7 @@ const json = async <T>(r: Response): Promise<T> => {
 export async function fetchPackages(params: {
   q?: string
   type?: "skill" | "extension"
+  category?: string
   sort?: "downloads" | "newest"
   page?: number
   pageSize?: number
@@ -36,11 +41,17 @@ export async function fetchPackages(params: {
   const sp = new URLSearchParams()
   if (params.q) sp.set("q", params.q)
   if (params.type) sp.set("type", params.type)
+  if (params.category) sp.set("category", params.category)
   if (params.sort) sp.set("sort", params.sort)
   if (params.page) sp.set("page", String(params.page))
   if (params.pageSize) sp.set("pageSize", String(params.pageSize))
   const r = await fetch(`/api/v1/packages?${sp}`, { credentials: "include" })
   return json<PackageListResponse>(r)
+}
+
+export async function fetchPackageCategories(): Promise<PackageCategoriesResponse> {
+  const r = await fetch("/api/v1/packages/categories", { credentials: "include" })
+  return json<PackageCategoriesResponse>(r)
 }
 
 export async function fetchPackageDetail(name: string) {
@@ -131,6 +142,41 @@ export async function rejectVersion(versionId: string, reason: string) {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
+  })
+  return json(r)
+}
+
+export interface AdminPackageItem {
+  id: string
+  name: string
+  type: "skill" | "extension"
+  category: string | null
+  description: string
+  status: "pending" | "published" | "rejected" | "unpublished"
+  downloads: number
+  author: { username: string; avatarUrl: string | null }
+  latestVersion?: string
+  updatedAt: number
+  createdAt: number
+}
+
+export async function fetchAdminPackages(): Promise<{ items: AdminPackageItem[] }> {
+  const r = await fetch("/api/v1/admin/packages", { credentials: "include" })
+  return json<{ items: AdminPackageItem[] }>(r)
+}
+
+export async function deleteAdminPackage(name: string) {
+  const r = await fetch(`/api/v1/admin/packages/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+    credentials: "include",
+  })
+  return json(r)
+}
+
+export async function deleteAdminVersion(versionId: string) {
+  const r = await fetch(`/api/v1/admin/versions/${versionId}`, {
+    method: "DELETE",
+    credentials: "include",
   })
   return json(r)
 }

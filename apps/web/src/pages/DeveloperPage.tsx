@@ -71,6 +71,9 @@ export function DeveloperPage() {
               >
                 {p.type === "skill" ? "Skill" : "Extension"}
               </span>
+              <span className="text-[var(--color-muted)] max-w-[140px] truncate" title={p.category ?? undefined}>
+                {p.category ?? "—"}
+              </span>
               <StatusBadge
                 status={p.status}
                 versionStatus={p.latestVersionStatus}
