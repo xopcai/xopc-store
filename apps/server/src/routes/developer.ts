@@ -174,6 +174,7 @@ export function createDeveloperRoutes(
     const versionRaw = form.get("version")
     const changelogRaw = form.get("changelog")
     const descriptionRaw = form.get("description")
+    const categoryRaw = form.get("category")
     const descriptionForForm =
       typeof descriptionRaw === "string" ? descriptionRaw : ""
 
@@ -202,6 +203,19 @@ export function createDeveloperRoutes(
     if (!scan.ok) {
       return badRequest(c, ErrorCodes.SCAN_FAILED, scan.message)
     }
+
+    const mergedManifest = {
+      ...(scan.data.manifest as Record<string, unknown>),
+    }
+    if (typeof categoryRaw === "string" && categoryRaw.trim()) {
+      const catR = normalizeCategory(categoryRaw)
+      if (!catR.ok) {
+        return badRequest(c, ErrorCodes.VALIDATION_ERROR, catR.message)
+      }
+      mergedManifest.category = catR.category
+    }
+
+    const manifestStr = stringifyManifest(mergedManifest)
 
     const existing = await db.query.packages.findFirst({
       where: eq(tables.packages.name, name),
@@ -248,9 +262,6 @@ export function createDeveloperRoutes(
 
     const fileKey = `packages/${name}/${version}/${name}-${version}.zip`
     const now = Math.floor(Date.now() / 1000)
-    const manifestStr = stringifyManifest(
-      scan.data.manifest as Record<string, unknown>,
-    )
 
     await storage.upload(fileKey, buf, "application/zip")
 
@@ -264,8 +275,7 @@ export function createDeveloperRoutes(
       const desc = descriptionForForm.trim()
         ? descriptionForForm.trim()
         : (scan.data.manifest.description as string)
-      const m = scan.data.manifest as Record<string, unknown>
-      const catR = normalizeCategory(m.category)
+      const catR = normalizeCategory(mergedManifest.category)
       const category = catR.ok ? catR.category : null
       const pkgId = nanoid()
       await db.insert(tables.packages).values({

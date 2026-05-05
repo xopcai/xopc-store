@@ -1,17 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
-import { fetchMe, type CurrentUser } from "@/lib/api"
+import { useId, useState } from "react"
+import { fetchMe, fetchPackageCategories, type CurrentUser } from "@/lib/api"
 
 export function PublishPage() {
   const qc = useQueryClient()
+  const categoryListId = useId()
   const me = useQuery<CurrentUser | null>({
     queryKey: ["me"],
     queryFn: fetchMe,
+  })
+  const categoriesQuery = useQuery({
+    queryKey: ["package-categories"],
+    queryFn: fetchPackageCategories,
   })
   const [name, setName] = useState("")
   const [type, setType] = useState<"skill" | "extension">("skill")
   const [version, setVersion] = useState("1.0.0")
   const [description, setDescription] = useState("")
+  const [category, setCategory] = useState("")
   const [changelog, setChangelog] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -26,6 +32,7 @@ export function PublishPage() {
       fd.append("version", version.trim())
       if (changelog.trim()) fd.append("changelog", changelog.trim())
       if (description.trim()) fd.append("description", description.trim())
+      if (category.trim()) fd.append("category", category.trim())
       const r = await fetch(
         `/api/v1/developer/packages/${encodeURIComponent(name.trim())}/versions`,
         {
@@ -110,6 +117,24 @@ export function PublishPage() {
             rows={3}
             className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
           />
+        </label>
+        <label className="block text-sm">
+          <span className="text-[var(--color-muted)]">
+            Category (optional, max 64 chars; overrides manifest when set)
+          </span>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list={categoryListId}
+            maxLength={64}
+            placeholder="e.g. productivity"
+            className="mt-1 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm"
+          />
+          <datalist id={categoryListId}>
+            {(categoriesQuery.data?.items ?? []).map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
         <label className="block text-sm">
           <span className="text-[var(--color-muted)]">Changelog (optional)</span>
