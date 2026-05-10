@@ -13,7 +13,19 @@
  *   --no-approve     Skip approve (versions stay pending)
  *   --dry-run
  *
- * Auth: mints a short-lived JWT from JWT_SECRET + first user row in SQLite (same machine only).
+ * Auth (pick one):
+ *   - Local store: omit XOPC_TOKEN — script mints JWT from apps/server/.env JWT_SECRET + SQLite.
+ *   - store.xopc.ai (or any remote): set XOPC_TOKEN to a JWT from the store (see below) and
+ *     XOPC_API_BASE=https://store.xopc.ai (or pass --api).
+ *
+ * Get a token for production: sign in with GitHub on the store, then open in the same browser
+ *   https://store.xopc.ai/auth/token
+ *   or complete OAuth with CLI mode:
+ *   https://store.xopc.ai/api/v1/auth/github?mode=cli
+ *   Copy the JWT shown on the token page; export XOPC_TOKEN='…' (do not commit it).
+ *
+ * Approve: --approve calls admin API; on production you must be a store admin or use --no-approve
+ * and wait for moderation.
  *
  * If a version already exists (409), the script bumps semver patch and retries (up to 50 times).
  *
@@ -374,7 +386,14 @@ async function main() {
 
   let token
   if (!opts.dryRun) {
-    token = await mintToken()
+    const envTok = process.env.XOPC_TOKEN?.trim()
+    if (envTok) {
+      log("auth: using XOPC_TOKEN from environment (remote store)")
+      token = envTok
+    } else {
+      log("auth: minting JWT from local apps/server .env + SQLite")
+      token = await mintToken()
+    }
   }
 
   const results = { ok: [], fail: [] }
